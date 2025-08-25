@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Tango">
 <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/google/material-design-icons/master/src/action/android/materialicons/48dp/2x/baseline_android_black_48dp.png">
 <link rel="manifest" href="data:application/manifest+json,{
+    "display": "standalone",
     &quot;name&quot;: &quot;Tango Puzzle Game&quot;,
     &quot;short_name&quot;: &quot;Tango&quot;,
     &quot;start_url&quot;: &quot;.&quot;,
@@ -66,7 +67,7 @@
     }
     .symbol-hint-wrapper .material-icons { font-size: 16px; color: #4A5568; }
     .top-icon-btn .material-icons { font-size: 1.75rem; }
-    .clickable:active { /* 모든 버튼 클릭 효과 */
+    button:active { /* 모든 버튼 클릭 효과 */
         transform: scale(0.9);
         filter: brightness(0.95);
         transition: transform 0.1s, filter 0.1s;
@@ -108,8 +109,8 @@
         overflow: hidden;
     }
     .record-cell { width: 100%; aspect-ratio: 1/1; }
-    .record-cell-sun { background-color: #FBBF24; }
-    .record-cell-moon { background-color: #60A5FA; }
+    .record-cell-sun { background-color: #f9d270; }
+    .record-cell-moon { background-color: #92c1fb; }
 </style>
 </head>
 <body>
