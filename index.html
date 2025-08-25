@@ -1,384 +1,604 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tango 게임</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #FFFFFF; }
-        * { box-shadow: none !important; }
-        .game-board {
-            display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
-            gap: 2px; background-color: #E2E8F0; border: 2px solid #E2E8F0; aspect-ratio: 1 / 1;
-        }
-        .cell {
-            background-color: #FFFFFF; display: flex; justify-content: center; align-items: center;
-            cursor: pointer; position: relative;
-            user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
-        }
-        .cell.hint { background-color: #F7FAFC; cursor: not-allowed; }
-        .cell.error { background-color: #FFF5F5; }
-        .material-icons { font-size: 1.875rem; user-select: none; }
-        .sun-icon { color: #F59E0B; }
-        .moon-icon { color: #3B82F6; }
-        .symbol-hint-wrapper {
-            width: 16px; height: 16px; background-color: white; display: flex;
-            justify-content: center; align-items: center; border-radius: 4px;
-        }
-        .symbol-hint-wrapper .material-icons { font-size: 16px; color: #4A5568; }
-        .top-icon-btn .material-icons { font-size: 1.75rem; }
-        @media (hover: none) { button:hover { background-color: initial !important; } }
-        #loading-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(255, 255, 255, 0.9); z-index: 9999;
-            display: flex; justify-content: center; align-items: center; flex-direction: column;
-            transition: opacity 0.3s;
-        }
-        #loading-overlay.hidden { opacity: 0; pointer-events: none; }
-        #progress-bar {
-            width: 80%; max-width: 300px; height: 8px; background-color: #E2E8F0;
-            border-radius: 4px; overflow: hidden; margin-top: 16px;
-        }
-        #progress { width: 0%; height: 100%; background-color: #3B82F6; transition: width 0.2s; }
-        #modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); z-index: 10000;
-            display: flex; justify-content: center; align-items: center;
-        }
-        #modal-content {
-            background-color: white; padding: 24px; border-radius: 8px;
-            width: 90%; max-width: 320px; text-align: center;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tango 게임</title>
+
+<!-- PWA and Mobile App Meta Tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tango">
+<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/google/material-design-icons/master/src/action/android/materialicons/48dp/2x/baseline_android_black_48dp.png">
+<link rel="manifest" href="data:application/manifest+json,{
+    &quot;name&quot;: &quot;Tango Puzzle Game&quot;,
+    &quot;short_name&quot;: &quot;Tango&quot;,
+    &quot;start_url&quot;: &quot;.&quot;,
+    &quot;display&quot;: &quot;standalone&quot;,
+    &quot;background_color&quot;: &quot;#FFFFFF&quot;,
+    &quot;theme_color&quot;: &quot;#3B82F6&quot;,
+    &quot;description&quot;: &quot;A logic puzzle game.&quot;,
+    &quot;icons&quot;: [{
+        &quot;src&quot;: &quot;https://raw.githubusercontent.com/google/material-design-icons/master/src/action/android/materialicons/48dp/2x/baseline_android_black_48dp.png&quot;,
+        &quot;sizes&quot;: &quot;96x96&quot;,
+        &quot;type&quot;: &quot;image/png&quot;
+    }]
+}">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Noto Sans KR', sans-serif;
+        background-color: #FFFFFF;
+        /* Prevent pull-to-refresh and double-tap zoom */
+        overscroll-behavior-y: contain;
+    }
+    * { box-shadow: none !important; }
+    .game-container {
+        padding-top: 5vh; /* 보드판을 위쪽으로 이동 */
+    }
+    .game-board {
+        display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+        gap: 2px; background-color: #E2E8F0; border: 2px solid #E2E8F0; aspect-ratio: 1 / 1;
+    }
+    .cell {
+        background-color: #FFFFFF; display: flex; justify-content: center; align-items: center;
+        cursor: pointer; position: relative;
+        user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
+        transition: background-color 0.2s;
+    }
+    .cell.hint { background-color: #F7FAFC; cursor: not-allowed; }
+    .cell.error { background-color: #FEE2E2; } /* 오류 표시: 배경색 변경 */
+    .material-icons { font-size: 1.875rem; user-select: none; }
+    .sun-icon { color: #F59E0B; }
+    .moon-icon { color: #3B82F6; }
+    .symbol-hint-wrapper {
+        width: 16px; height: 16px; background-color: white; display: flex;
+        justify-content: center; align-items: center; border-radius: 4px;
+    }
+    .symbol-hint-wrapper .material-icons { font-size: 16px; color: #4A5568; }
+    .top-icon-btn .material-icons { font-size: 1.75rem; }
+    .action-btn:active { /* 버튼 클릭 효과 */
+        transform: scale(0.97);
+        filter: brightness(0.95);
+    }
+    #loading-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(255, 255, 255, 0.9); z-index: 9999;
+        display: flex; justify-content: center; align-items: center; flex-direction: column;
+        transition: opacity 0.3s;
+    }
+    #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+    #progress-bar {
+        width: 80%; max-width: 300px; height: 8px; background-color: #E2E8F0;
+        border-radius: 4px; overflow: hidden; margin-top: 16px;
+    }
+    #progress { width: 0%; height: 100%; background-color: #3B82F6; transition: width 0.2s; }
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); z-index: 10000;
+        display: flex; justify-content: center; align-items: center;
+    }
+    .modal-content {
+        background-color: white; padding: 24px; border-radius: 8px;
+        width: 90%; max-width: 360px; text-align: center;
+    }
+    #confetti-canvas {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        pointer-events: none; z-index: 10001;
+    }
+    .record-item {
+        display: grid; grid-template-columns: 80px 1fr; gap: 16px; align-items: center;
+        padding: 12px; border-bottom: 1px solid #E2E8F0;
+    }
+    .record-board {
+        display: grid; grid-template-columns: repeat(8, 1fr);
+        gap: 1px; background-color: #CBD5E0;
+        aspect-ratio: 1/1;
+        border-radius: 4px; /* 약간의 둥근 모서리 추가 */
+        overflow: hidden; /* 둥근 모서리 적용 */
+    }
+    .record-cell { width: 100%; aspect-ratio: 1/1; }
+    .record-cell-sun { background-color: #FBBF24; } /* 밝은 주황색 (amber-400) */
+    .record-cell-moon { background-color: #60A5FA; } /* 밝은 파란색 (blue-400) */
+</style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
+<body class="flex justify-center min-h-screen">
 
-    <div class="w-full max-w-md p-4">
-        <div class="flex justify-end items-center mb-4 space-x-2">
-            <button id="new-game-btn" class="top-icon-btn text-gray-600 hover:text-blue-500 p-2 rounded-full"><span class="material-icons">refresh</span></button>
-            <button id="reset-btn" class="top-icon-btn text-gray-600 hover:text-blue-500 p-2 rounded-full"><span class="material-icons">replay</span></button>
-        </div>
-        <div id="game-board" class="game-board"></div>
-        <div class="grid grid-cols-2 gap-4 mt-4">
-            <button id="check-btn" class="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-600">체크</button>
-            <button id="undo-btn" class="w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-300">되돌리기</button>
-        </div>
-    </div>
+<canvas id="confetti-canvas"></canvas>
 
-    <div id="loading-overlay">
-        <div class="text-gray-700">새로운 퍼즐 생성 중...</div>
-        <div id="progress-bar"><div id="progress"></div></div>
+<div id="game-container" class="game-container w-full max-w-md p-4">
+    <div class="flex justify-between items-center mb-2">
+        <div id="timer" class="flex items-center text-xl text-gray-700 font-medium">
+            <span class="material-icons mr-1" style="font-size: 1.5rem;">timer</span>
+            <span id="timer-display">00:00</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button id="records-btn" class="top-icon-btn text-gray-600 p-2 rounded-full action-btn"><span class="material-icons">history</span></button>
+            <button id="new-game-btn" class="top-icon-btn text-gray-600 p-2 rounded-full action-btn"><span class="material-icons">grid_on</span></button>
+            <button id="reset-btn" class="top-icon-btn text-gray-600 p-2 rounded-full action-btn"><span class="material-icons">refresh</span></button>
+        </div>
     </div>
     
-    <div id="modal-overlay" style="display: none;">
-        <div id="modal-content">
-            <p id="modal-text" class="mb-4 text-gray-800"></p>
-            <div class="flex justify-center gap-4">
-                <button id="modal-confirm-btn" class="bg-blue-500 text-white px-6 py-2 rounded-lg">확인</button>
-                <button id="modal-cancel-btn" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg">취소</button>
-            </div>
+    <div id="error-display" class="text-center text-red-500 font-medium h-6 mb-2"></div>
+
+    <div id="game-board" class="game-board rounded-lg overflow-hidden"></div>
+    <div class="grid grid-cols-2 gap-4 mt-4">
+        <button id="undo-btn" class="action-btn w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg">되돌리기</button>
+        <button id="hint-btn" class="action-btn w-full bg-yellow-400 text-white font-bold py-3 px-4 rounded-lg">힌트</button>
+    </div>
+</div>
+
+<div id="loading-overlay">
+    <div class="text-gray-700">새로운 퍼즐 생성 중...</div>
+    <div id="progress-bar"><div id="progress"></div></div>
+</div>
+
+<div id="modal-overlay" class="modal-overlay" style="display: none;">
+    <div id="modal-content" class="modal-content">
+        <p id="modal-text" class="mb-4 text-gray-800"></p>
+        <div class="flex justify-center gap-4">
+            <button id="modal-confirm-btn" class="action-btn bg-blue-500 text-white px-6 py-2 rounded-lg">확인</button>
+            <button id="modal-cancel-btn" class="action-btn bg-gray-200 text-gray-700 px-6 py-2 rounded-lg">취소</button>
         </div>
     </div>
+</div>
 
-    <script>
-        const BOARD_SIZE = 8;
-        const gameBoard = document.getElementById('game-board');
-        const loadingOverlay = document.getElementById('loading-overlay');
-        
-        let answerBoard = [], puzzleBoard = [], playerBoard = [], history = [];
+<div id="success-modal-overlay" class="modal-overlay" style="display: none;">
+    <div id="success-modal-content" class="modal-content">
+        <h2 class="text-2xl font-bold text-blue-500 mb-2">성공!</h2>
+        <p id="success-modal-text" class="mb-4 text-gray-800"></p>
+        <div class="flex flex-col gap-3">
+            <button id="success-new-game-btn" class="action-btn w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-lg">새 게임 시작</button>
+            <button id="success-close-btn" class="action-btn w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg">보드 보기</button>
+        </div>
+    </div>
+</div>
 
-        // --- 로직: 퍼즐 생성 ---
-        async function generateNewPuzzle() {
-            showLoading(true);
-            await new Promise(resolve => setTimeout(resolve, 50));
-            answerBoard = createSolutionBoard();
-            updateProgress(10);
-            await new Promise(resolve => setTimeout(resolve, 50));
-            puzzleBoard = await createMinimalPuzzle(answerBoard);
-            playerBoard = puzzleBoard.map(row => row.map(cell => ({ ...cell })));
-            history = [];
-            await new Promise(resolve => setTimeout(resolve, 200));
-            showLoading(false);
-        }
-        
-        async function createMinimalPuzzle(solution) {
-            let puzzle = JSON.parse(JSON.stringify(solution));
-            let coords = [];
-            for(let r=0; r<BOARD_SIZE; r++) for(let c=0; c<BOARD_SIZE; c++) coords.push({r,c});
-            coords.sort(() => Math.random() - 0.5);
+<div id="records-modal-overlay" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">플레이 기록</h2>
+            <button id="records-close-btn" class="top-icon-btn text-gray-600 p-1 rounded-full action-btn"><span class="material-icons">close</span></button>
+        </div>
+        <div id="records-list" class="max-h-96 overflow-y-auto text-left"></div>
+    </div>
+</div>
 
-            for (let i = 0; i < coords.length; i++) {
-                const {r, c} = coords[i];
-                const originalCell = JSON.parse(JSON.stringify(puzzle[r][c]));
-                if (originalCell.type === 0) continue;
-                const preservedSymbol = puzzle[r][c].symbol;
-                puzzle[r][c] = { type: 0, isHint: false };
-                if(preservedSymbol) puzzle[r][c].symbol = preservedSymbol;
-                let solutions = countSolutions(JSON.parse(JSON.stringify(puzzle)));
-                if (solutions !== 1) {
-                    puzzle[r][c] = originalCell;
-                }
-                updateProgress(10 + Math.floor((i / coords.length) * 85));
-                if (i % 5 === 0) await new Promise(resolve => setTimeout(resolve, 0));
-            }
+
+<script>
+    const BOARD_SIZE = 8;
+    const gameBoard = document.getElementById('game-board');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const errorDisplay = document.getElementById('error-display');
+
+    let answerBoard = [], puzzleBoard = [], playerBoard = [], history = [];
+    let timerInterval = null, startTime = 0, elapsedTime = 0;
+
+    // --- 로직: 퍼즐 생성 ---
+    async function generateNewPuzzle() {
+        showLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 50));
+        answerBoard = createSolutionBoard();
+        updateProgress(10);
+        await new Promise(resolve => setTimeout(resolve, 50));
+        puzzleBoard = await createMinimalPuzzle(JSON.parse(JSON.stringify(answerBoard)));
+        playerBoard = puzzleBoard.map(row => row.map(cell => ({ ...cell })));
+        history = [];
+        await new Promise(resolve => setTimeout(resolve, 200));
+        showLoading(false);
+    }
+
+    async function createMinimalPuzzle(solution) {
+        let puzzle = solution;
+        let coords = [];
+        for(let r=0; r<BOARD_SIZE; r++) for(let c=0; c<BOARD_SIZE; c++) coords.push({r,c});
+        coords.sort(() => Math.random() - 0.5);
+
+        for (let i = 0; i < coords.length; i++) {
+            const {r, c} = coords[i];
+            const originalCell = JSON.parse(JSON.stringify(puzzle[r][c]));
+            if (originalCell.type === 0) continue;
             
+            puzzle[r][c].type = 0;
+            puzzle[r][c].isHint = false;
+            
+            if (countSolutions(JSON.parse(JSON.stringify(puzzle))) !== 1) {
+                puzzle[r][c] = originalCell;
+            }
+            updateProgress(10 + Math.floor((i / coords.length) * 85));
+            if (i % 5 === 0) await new Promise(resolve => setTimeout(resolve, 0));
+        }
+
+        for(let r=0; r<BOARD_SIZE; r++) {
+            for(let c=0; c<BOARD_SIZE; c++) {
+                puzzle[r][c].isHint = (puzzle[r][c].type !== 0);
+            }
+        }
+        updateProgress(100);
+        return puzzle;
+    }
+
+    // --- 퍼즐 생성용 고속 유효성 검사 함수 ---
+    function isPlacementValid(board, r, c) {
+        let sunsInRow = 0, moonsInRow = 0;
+        for (let i = 0; i < BOARD_SIZE; i++) {
+            const type = board[r][i]?.type || 0;
+            if (type === 1) sunsInRow++; else if (type === 2) moonsInRow++;
+        }
+        if (sunsInRow > BOARD_SIZE / 2 || moonsInRow > BOARD_SIZE / 2) return false;
+
+        let sunsInCol = 0, moonsInCol = 0;
+        for (let i = 0; i < BOARD_SIZE; i++) {
+            const type = board[i][c]?.type || 0;
+            if (type === 1) sunsInCol++; else if (type === 2) moonsInCol++;
+        }
+        if (sunsInCol > BOARD_SIZE / 2 || moonsInCol > BOARD_SIZE / 2) return false;
+
+        const currentType = board[r][c]?.type;
+        if (currentType) {
+            if (c > 1 && board[r][c-1]?.type === currentType && board[r][c-2]?.type === currentType) return false;
+            if (c > 0 && c < BOARD_SIZE - 1 && board[r][c-1]?.type === currentType && board[r][c+1]?.type === currentType) return false;
+            if (c < BOARD_SIZE - 2 && board[r][c+1]?.type === currentType && board[r][c+2]?.type === currentType) return false;
+            if (r > 1 && board[r-1][c]?.type === currentType && board[r-2][c]?.type === currentType) return false;
+            if (r > 0 && r < BOARD_SIZE - 1 && board[r-1][c]?.type === currentType && board[r+1][c]?.type === currentType) return false;
+            if (r < BOARD_SIZE - 2 && board[r+1][c]?.type === currentType && board[r+2][c]?.type === currentType) return false;
+        }
+        return true;
+    }
+
+    function countSolutions(board) {
+        const firstEmpty = findEmpty(board);
+        if (!firstEmpty) {
+            return validateBoard(board, true) === null ? 1 : 0;
+        }
+        const {r, c} = firstEmpty;
+        let count = 0;
+        for (const type of [1, 2]) {
+            board[r][c].type = type;
+            if (isPlacementValid(board, r, c)) {
+                count += countSolutions(board);
+            }
+            if (count > 1) {
+                board[r][c].type = 0;
+                return count;
+            }
+        }
+        board[r][c].type = 0;
+        return count;
+    }
+
+    function findEmpty(board) {
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (board[r][c].type === 0 && !board[r][c].isHint) return {r, c};
+            }
+        }
+        return null;
+    }
+
+    function createSolutionBoard() {
+        let board;
+        for (let attempts = 0; attempts < 200; attempts++) {
+            board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null).map(() => ({})));
+            if (fillBoard(board, 0, 0)) return addSymbolHintsToSolution(board);
+        }
+        return createFallbackSolution();
+    }
+
+    function fillBoard(board, r, c) {
+        if (r === BOARD_SIZE) return true;
+        const [next_r, next_c] = (c === BOARD_SIZE - 1) ? [r + 1, 0] : [r, c + 1];
+        const items = [1, 2].sort(() => Math.random() - 0.5);
+        for (const item of items) {
+            board[r][c].type = item;
+            if (isPlacementValid(board, r, c) && fillBoard(board, next_r, next_c)) return true;
+        }
+        board[r][c].type = 0;
+        return false;
+    }
+
+    function addSymbolHintsToSolution(board) {
+        let hintCount = 0, attempts = 0;
+        while(hintCount < 4 && attempts < 100) {
+            const r = Math.floor(Math.random() * BOARD_SIZE);
+            const c = Math.floor(Math.random() * (BOARD_SIZE - 1));
+            if (!board[r][c].symbol) {
+                board[r][c].symbol = (board[r][c].type === board[r][c+1].type) ? 3 : 4;
+                hintCount++;
+            }
+            attempts++;
+        }
+        return board;
+    }
+    function createFallbackSolution() {
+        const pattern = [[1,1,2,2,1,1,2,2], [2,2,1,1,2,2,1,1]];
+        let board = [];
+        for(let i=0; i<BOARD_SIZE; i++) board.push(pattern[i%2].map(type => ({type})));
+        return addSymbolHintsToSolution(board);
+    }
+
+    // --- 사용자용 보드 유효성 검사 및 오류 메시지 반환 로직 ---
+    function validateBoard(board, isFinalCheck) {
+        for (let i = 0; i < BOARD_SIZE; i++) {
+            let sunsInRow = 0, moonsInRow = 0, sunsInCol = 0, moonsInCol = 0;
+            for (let j = 0; j < BOARD_SIZE; j++) {
+                if (board[i][j].type === 1) sunsInRow++; else if (board[i][j].type === 2) moonsInRow++;
+                if (board[j][i].type === 1) sunsInCol++; else if (board[j][i].type === 2) moonsInCol++;
+            }
+            if (sunsInRow > BOARD_SIZE / 2 || moonsInRow > BOARD_SIZE / 2) return { message: `${i + 1}행에 같은 모양이 4개를 초과했습니다.`, cells: Array(BOARD_SIZE).fill(0).map((_, k) => ({r: i, c: k})) };
+            if (sunsInCol > BOARD_SIZE / 2 || moonsInCol > BOARD_SIZE / 2) return { message: `${i + 1}열에 같은 모양이 4개를 초과했습니다.`, cells: Array(BOARD_SIZE).fill(0).map((_, k) => ({r: k, c: i})) };
+            if (isFinalCheck && (sunsInRow !== BOARD_SIZE / 2)) return { message: `${i + 1}행의 해/달 개수가 맞지 않습니다.`, cells: [] };
+            if (isFinalCheck && (sunsInCol !== BOARD_SIZE / 2)) return { message: `${i + 1}열의 해/달 개수가 맞지 않습니다.`, cells: [] };
+        }
+
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                const currentType = board[r][c].type;
+                if (currentType !== 0) {
+                    if (c > 1 && board[r][c-1].type === currentType && board[r][c-2].type === currentType) return { message: "같은 모양 3개가 연속으로 올 수 없습니다.", cells: [{r, c}, {r, c: c-1}, {r, c: c-2}] };
+                    if (r > 1 && board[r-1][c].type === currentType && board[r-2][c].type === currentType) return { message: "같은 모양 3개가 연속으로 올 수 없습니다.", cells: [{r, c}, {r: r-1, c}, {r: r-2, c}] };
+                }
+                
+                if (c < BOARD_SIZE - 1 && board[r][c].symbol) {
+                    const leftType = board[r][c].type, rightType = board[r][c+1].type;
+                    if (leftType !== 0 && rightType !== 0) {
+                        const symbol = board[r][c].symbol;
+                        if (symbol === 3 && leftType !== rightType) return { message: "기호(=) 양쪽의 모양이 다릅니다.", cells: [{r, c}, {r, c: c+1}] };
+                        if (symbol === 4 && leftType === rightType) return { message: "기호(≠) 양쪽의 모양이 같습니다.", cells: [{r, c}, {r, c: c+1}] };
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    // --- UI 및 이벤트 핸들러 ---
+    function renderBoard() {
+        gameBoard.innerHTML = '';
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                const cellData = playerBoard[r][c];
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (cellData.isHint) cell.classList.add('hint');
+                if (cellData.error) cell.classList.add('error');
+
+                let content = '';
+                if (cellData.type === 1) content = '<span class="material-icons sun-icon">light_mode</span>';
+                else if (cellData.type === 2) content = '<span class="material-icons moon-icon">dark_mode</span>';
+
+                if(cellData.symbol) {
+                    const symbolIcon = cellData.symbol === 3 ? 'drag_handle' : 'close';
+                    content += `<div style="position: absolute; right: -10px; top: 50%; transform: translateY(-50%); z-index: 10;"><div class="symbol-hint-wrapper"><span class="material-icons">${symbolIcon}</span></div></div>`;
+                }
+                cell.innerHTML = content;
+
+                if (!cellData.isHint) {
+                    let pressTimer = null;
+                    const handlePressStart = (e) => {
+                        if (e.type === 'touchstart') e.preventDefault();
+                        pressTimer = setTimeout(() => { pressTimer = null; handleCellLongPress(r, c); }, 300);
+                    };
+                    const handlePressEnd = () => { if (pressTimer) { clearTimeout(pressTimer); handleCellClick(r, c); } };
+                    cell.addEventListener('mousedown', handlePressStart);
+                    cell.addEventListener('mouseup', handlePressEnd);
+                    cell.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+                    cell.addEventListener('touchstart', handlePressStart, { passive: false });
+                    cell.addEventListener('touchend', handlePressEnd);
+                }
+                gameBoard.appendChild(cell);
+            }
+        }
+    }
+
+    function handleCellClick(r, c) {
+        history.push(JSON.parse(JSON.stringify(playerBoard)));
+        playerBoard[r][c].type = (playerBoard[r][c].type + 1) % 3;
+        checkForErrorsAndWin();
+    }
+
+    function handleCellLongPress(r, c) {
+        history.push(JSON.parse(JSON.stringify(playerBoard)));
+        playerBoard[r][c].type = (playerBoard[r][c].type + 2) % 3;
+        checkForErrorsAndWin();
+    }
+
+    function handleUndo() {
+        if (history.length > 0) {
+            playerBoard = history.pop();
+            checkForErrorsAndWin();
+        }
+    }
+
+    function handleHint() {
+        const emptyCell = findEmpty(playerBoard);
+        if (emptyCell) {
+            history.push(JSON.parse(JSON.stringify(playerBoard)));
+            const { r, c } = emptyCell;
+            playerBoard[r][c].type = answerBoard[r][c].type;
+            playerBoard[r][c].isHint = true;
+            checkForErrorsAndWin();
+        } else {
+            showModal("힌트를 사용할 곳이 없습니다.", null, true);
+        }
+    }
+
+    function checkForErrorsAndWin() {
+        let isFull = true;
+        playerBoard.forEach(row => row.forEach(cell => {
+             cell.error = false;
+             if(cell.type === 0 && !cell.isHint) isFull = false;
+        }));
+        errorDisplay.textContent = '';
+
+        const error = validateBoard(playerBoard, false);
+        if (error) {
+            errorDisplay.textContent = error.message;
+            error.cells.forEach(({r, c}) => { playerBoard[r][c].error = true; });
+        }
+        renderBoard();
+
+        if (isFull) {
+            let isCorrect = true;
             for(let r=0; r<BOARD_SIZE; r++) {
                 for(let c=0; c<BOARD_SIZE; c++) {
-                    puzzle[r][c].isHint = (puzzle[r][c].type !== 0);
-                }
-            }
-            updateProgress(100);
-            return puzzle;
-        }
-
-        function countSolutions(board) {
-            const firstEmpty = findEmpty(board);
-            if (!firstEmpty) {
-                for(let r=0; r<BOARD_SIZE; r++) {
-                    for(let c=0; c<BOARD_SIZE; c++) {
-                        if(!isBoardStateValid(board, r, c, true)) return 0;
+                    if (playerBoard[r][c].type !== answerBoard[r][c].type) {
+                        isCorrect = false; break;
                     }
                 }
-                return 1;
+                if (!isCorrect) break;
             }
-            const {r, c} = firstEmpty;
-            let count = 0;
-            for (const type of [1, 2]) {
-                board[r][c].type = type;
-                if (isBoardStateValid(board, r, c, false)) {
-                    count += countSolutions(board);
-                }
-                if (count > 1) {
-                    board[r][c].type = 0;
-                    return count;
-                }
-            }
-            board[r][c].type = 0;
-            return count;
+            if (isCorrect) handleWin();
+            else if (!error) errorDisplay.textContent = "보드는 다 채웠지만, 정답이 아닙니다.";
         }
-        
-        function findEmpty(board) {
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (board[r][c].type === 0) return {r, c};
-                }
-            }
-            return null;
+    }
+    
+    function handleWin() {
+        stopTimer();
+        const timeString = formatTime(elapsedTime);
+        document.getElementById('success-modal-text').textContent = `완료 시간: ${timeString}`;
+        document.getElementById('success-modal-overlay').style.display = 'flex';
+        saveRecord(playerBoard, elapsedTime);
+        runConfetti();
+    }
+
+    function showLoading(show) {
+        loadingOverlay.classList.toggle('hidden', !show);
+        if(show) updateProgress(0);
+    }
+    function updateProgress(percentage) {
+        document.getElementById('progress').style.width = `${percentage}%`;
+    }
+    let modalConfirmCallback = null;
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    function showModal(text, onConfirm, isAlert = false) {
+        document.getElementById('modal-text').textContent = text;
+        modalConfirmCallback = onConfirm;
+        modalCancelBtn.style.display = isAlert ? 'none' : 'inline-block';
+        modalOverlay.style.display = 'flex';
+    }
+    document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+        if (modalConfirmCallback) modalConfirmCallback();
+        modalOverlay.style.display = 'none';
+    });
+    modalCancelBtn.addEventListener('click', () => { modalOverlay.style.display = 'none'; });
+
+    function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        startTime = Date.now();
+        elapsedTime = 0;
+        updateTimerDisplay();
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+    }
+    function stopTimer() { clearInterval(timerInterval); }
+    function updateTimerDisplay() {
+        if(startTime > 0) elapsedTime = Date.now() - startTime;
+        document.getElementById('timer-display').textContent = formatTime(elapsedTime);
+    }
+    function formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+        return `${minutes}:${seconds}`;
+    }
+
+    function saveRecord(board, time) {
+        let records = JSON.parse(localStorage.getItem('tangoRecords')) || [];
+        const newRecord = {
+            date: new Date().toISOString(),
+            time: time,
+            board: board.map(row => row.map(cell => cell.type))
+        };
+        records.unshift(newRecord);
+        if (records.length > 20) records = records.slice(0, 20);
+        localStorage.setItem('tangoRecords', JSON.stringify(records));
+    }
+    function loadAndShowRecords() {
+        const records = JSON.parse(localStorage.getItem('tangoRecords')) || [];
+        const recordsList = document.getElementById('records-list');
+        recordsList.innerHTML = '';
+
+        if (records.length === 0) {
+            recordsList.innerHTML = '<p class="text-center text-gray-500 py-4">플레이 기록이 없습니다.</p>';
+            return;
         }
 
-        function isBoardStateValid(board, r, c, isFinalCheck) {
-            let sunsInRow = 0, moonsInRow = 0;
-            for(let i = 0; i < BOARD_SIZE; i++) {
-                const type = board[r][i]?.type || 0;
-                if (type === 1) sunsInRow++; else if (type === 2) moonsInRow++;
-            }
-            if (sunsInRow > BOARD_SIZE / 2 || moonsInRow > BOARD_SIZE / 2) return false;
-            if (isFinalCheck && (sunsInRow !== BOARD_SIZE / 2 || moonsInRow !== BOARD_SIZE / 2)) return false;
-            let sunsInCol = 0, moonsInCol = 0;
-            for(let i = 0; i < BOARD_SIZE; i++) {
-                const type = board[i][c]?.type || 0;
-                if (type === 1) sunsInCol++; else if (type === 2) moonsInCol++;
-            }
-            if (sunsInCol > BOARD_SIZE / 2 || moonsInCol > BOARD_SIZE / 2) return false;
-            if (isFinalCheck && (sunsInCol !== BOARD_SIZE / 2 || moonsInCol !== BOARD_SIZE / 2)) return false;
-            const currentType = board[r][c]?.type;
-            if(currentType) {
-                if (c > 1 && board[r][c-1]?.type === currentType && board[r][c-2]?.type === currentType) return false;
-                if (r > 1 && board[r-1][c]?.type === currentType && board[r-2][c]?.type === currentType) return false;
-                if (c > 0 && c < BOARD_SIZE -1 && board[r][c-1]?.type === currentType && board[r][c+1]?.type === currentType) return false;
-                if (r > 0 && r < BOARD_SIZE -1 && board[r-1][c]?.type === currentType && board[r+1][c]?.type === currentType) return false;
-            }
-            if (c > 0 && board[r][c-1]?.symbol) {
-                const leftType = board[r][c-1].type, rightType = board[r][c].type;
-                if (leftType && rightType) {
-                    const symbol = board[r][c-1].symbol;
-                    if (symbol === 3 && leftType !== rightType) return false;
-                    if (symbol === 4 && leftType === rightType) return false;
-                }
-            }
-            if (board[r][c]?.symbol) {
-                const leftType = board[r][c].type, rightType = (c < BOARD_SIZE - 1) ? board[r][c+1]?.type : null;
-                 if (leftType && rightType) {
-                    const symbol = board[r][c].symbol;
-                    if (symbol === 3 && leftType !== rightType) return false;
-                    if (symbol === 4 && leftType === rightType) return false;
-                }
-            }
-            return true;
-        }
-        
-        function createSolutionBoard() {
-            let board;
-            for (let attempts = 0; attempts < 200; attempts++) {
-                board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
-                if (fillBoard(board, 0, 0)) return addSymbolHintsToSolution(board);
-            }
-            return createFallbackSolution();
-        }
-        function fillBoard(board, r, c) {
-            if (r === BOARD_SIZE) return true;
-            const [next_r, next_c] = (c === BOARD_SIZE - 1) ? [r + 1, 0] : [r, c + 1];
-            const items = [1, 2].sort(() => Math.random() - 0.5);
-            for (const item of items) {
-                board[r][c] = { type: item };
-                if (isBoardStateValid(board, r, c, false) && fillBoard(board, next_r, next_c)) return true;
-            }
-            board[r][c] = null;
-            return false;
-        }
-        function addSymbolHintsToSolution(board) {
-            let hintCount = 0, attempts = 0;
-            while(hintCount < 4 && attempts < 100) {
-                const r = Math.floor(Math.random() * BOARD_SIZE);
-                const c = Math.floor(Math.random() * (BOARD_SIZE - 1));
-                if (!board[r][c].symbol) {
-                    board[r][c].symbol = (board[r][c].type === board[r][c+1].type) ? 3 : 4;
-                    hintCount++;
-                }
-                attempts++;
-            }
-            return board;
-        }
-        function createFallbackSolution() {
-            const pattern = [[1,1,2,2,1,1,2,2], [2,2,1,1,2,2,1,1]];
-            let board = [];
-            for(let i=0; i<BOARD_SIZE; i++) board.push(pattern[i%2].map(type => ({type})));
-            return addSymbolHintsToSolution(board);
-        }
-
-        // --- UI 및 이벤트 핸들러 ---
-        function renderBoard() {
-            gameBoard.innerHTML = '';
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    const cellData = playerBoard[r][c];
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    if (cellData.isHint) cell.classList.add('hint');
-                    if (cellData.error) cell.classList.add('error');
-
-                    let content = '';
-                    if (cellData.type === 1) content = '<span class="material-icons sun-icon">light_mode</span>';
-                    else if (cellData.type === 2) content = '<span class="material-icons moon-icon">dark_mode</span>';
-                    
-                    if(cellData.symbol) {
-                        const symbolIcon = cellData.symbol === 3 ? 'drag_handle' : 'close';
-                        content += `<div style="position: absolute; right: -10px; top: 50%; transform: translateY(-50%); z-index: 10;"><div class="symbol-hint-wrapper"><span class="material-icons">${symbolIcon}</span></div></div>`;
-                    }
-                    cell.innerHTML = content;
-                    
-                    if (!cellData.isHint) {
-                        // --- 수정된 클릭 및 롱프레스 핸들러 ---
-                        let pressTimer = null;
-
-                        const handlePressStart = (e) => {
-                            if (e.type === 'touchstart') e.preventDefault();
-                            pressTimer = setTimeout(() => {
-                                handleCellLongPress(r, c);
-                                pressTimer = null; // 롱프레스 실행됨을 표시
-                            }, 400);
-                        };
-
-                        const handlePressEnd = () => {
-                            if (pressTimer) { // 타이머가 살아있으면 롱프레스가 아님
-                                clearTimeout(pressTimer);
-                                handleCellClick(r, c);
-                            }
-                        };
-                        
-                        cell.addEventListener('mousedown', handlePressStart);
-                        cell.addEventListener('mouseup', handlePressEnd);
-                        cell.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-                        cell.addEventListener('touchstart', handlePressStart, { passive: false });
-                        cell.addEventListener('touchend', handlePressEnd);
-                    }
-                    gameBoard.appendChild(cell);
-                }
-            }
-        }
-        
-        function handleCellClick(r, c) {
-            history.push(JSON.parse(JSON.stringify(playerBoard)));
-            playerBoard[r][c].type = (playerBoard[r][c].type + 1) % 3;
-            playerBoard.forEach(row => row.forEach(cell => cell.error = false));
-            renderBoard();
-        }
-
-        function handleCellLongPress(r, c) {
-            history.push(JSON.parse(JSON.stringify(playerBoard)));
-            playerBoard[r][c].type = (playerBoard[r][c].type + 2) % 3;
-            playerBoard.forEach(row => row.forEach(cell => cell.error = false));
-            renderBoard();
-        }
-
-        function handleUndo() {
-            if (history.length > 0) {
-                playerBoard = history.pop();
-                renderBoard();
-            }
-        }
-        function handleCheck() {
-            let isCorrect = true, errorCount = 0;
-            playerBoard.forEach((row, r) => row.forEach((cell, c) => {
-                cell.error = false;
-                if (cell.type === 0 || (!cell.isHint && cell.type !== answerBoard[r][c].type)) {
-                    isCorrect = false;
-                    if (cell.type !== 0) { cell.error = true; errorCount++; }
-                }
-            }));
-            renderBoard();
-            if (isCorrect) showModal("성공! 퍼즐을 완료했습니다.", null, true);
-            else if (errorCount > 0) showModal(`틀린 부분이 ${errorCount}개 있습니다.`, null, true);
-            else showModal("아직 완성되지 않았습니다.", null, true);
-        }
-        function showLoading(show) {
-            loadingOverlay.classList.toggle('hidden', !show);
-            if(show) updateProgress(0);
-        }
-        function updateProgress(percentage) {
-            document.getElementById('progress').style.width = `${percentage}%`;
-        }
-        let modalConfirmCallback = null;
-        const modalOverlay = document.getElementById('modal-overlay');
-        const modalCancelBtn = document.getElementById('modal-cancel-btn');
-        function showModal(text, onConfirm, isAlert = false) {
-            document.getElementById('modal-text').textContent = text;
-            modalConfirmCallback = onConfirm;
-            modalCancelBtn.style.display = isAlert ? 'none' : 'inline-block';
-            modalOverlay.style.display = 'flex';
-        }
-        document.getElementById('modal-confirm-btn').addEventListener('click', () => {
-            if (modalConfirmCallback) modalConfirmCallback();
-            modalOverlay.style.display = 'none';
+        records.forEach(record => {
+            const item = document.createElement('div');
+            item.className = 'record-item';
+            const boardHTML = `<div class="record-board">${record.board.map(row => row.map(cellType => `<div class="record-cell ${cellType === 1 ? 'record-cell-sun' : 'record-cell-moon'}"></div>`).join('')).join('')}</div>`;
+            const infoHTML = `<div><p class="font-bold text-gray-800">${formatTime(record.time)}</p><p class="text-sm text-gray-500">${new Date(record.date).toLocaleString('ko-KR')}</p></div>`;
+            item.innerHTML = boardHTML + infoHTML;
+            recordsList.appendChild(item);
         });
-        modalCancelBtn.addEventListener('click', () => { modalOverlay.style.display = 'none'; });
-        document.getElementById('new-game-btn').addEventListener('click', () => {
-            showModal('새로운 게임을 시작할까요?', async () => {
-                await generateNewPuzzle();
-                renderBoard();
-            });
-        });
-        document.getElementById('reset-btn').addEventListener('click', () => {
-            showModal('현재 퍼즐을 초기화할까요?', () => {
-                playerBoard = puzzleBoard.map(row => row.map(cell => ({ ...cell })));
-                history = [];
-                renderBoard();
-            });
-        });
-        document.getElementById('check-btn').addEventListener('click', handleCheck);
-        document.getElementById('undo-btn').addEventListener('click', handleUndo);
+        document.getElementById('records-modal-overlay').style.display = 'flex';
+    }
 
-        async function initGame() {
-            await generateNewPuzzle();
-            renderBoard();
+    const confettiCanvas = document.getElementById('confetti-canvas');
+    const confettiCtx = confettiCanvas.getContext('2d');
+    let confettiParticles = [];
+    function runConfetti() {
+        confettiCanvas.width = window.innerWidth;
+        confettiCanvas.height = window.innerHeight;
+        confettiParticles = [];
+        const particleCount = 200, colors = ['#F59E0B', '#3B82F6', '#63B3ED', '#F6E05E', '#A7F3D0'];
+        for (let i = 0; i < particleCount; i++) {
+            confettiParticles.push({ x: Math.random() * confettiCanvas.width, y: Math.random() * confettiCanvas.height - confettiCanvas.height, radius: Math.random() * 5 + 2, color: colors[Math.floor(Math.random() * colors.length)], vx: Math.random() * 6 - 3, vy: Math.random() * 5 + 2, alpha: 1 });
         }
+        animateConfetti();
+    }
+    function animateConfetti() {
+        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        let stillAnimating = false;
+        confettiParticles.forEach(p => {
+            p.y += p.vy; p.x += p.vx; p.alpha -= 0.01;
+            if (p.alpha > 0) {
+                stillAnimating = true;
+                confettiCtx.globalAlpha = p.alpha;
+                confettiCtx.beginPath();
+                confettiCtx.fillStyle = p.color;
+                confettiCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                confettiCtx.fill();
+            }
+        });
+        if (stillAnimating) requestAnimationFrame(animateConfetti);
+        else confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
 
-        initGame();
-    </script>
+    document.getElementById('new-game-btn').addEventListener('click', () => { showModal('새로운 게임을 시작할까요?', async () => { await initGame(); }); });
+    document.getElementById('reset-btn').addEventListener('click', () => {
+        showModal('현재 퍼즐을 초기화할까요?', () => {
+            playerBoard = puzzleBoard.map(row => row.map(cell => ({ ...cell })));
+            history = [];
+            startTimer();
+            checkForErrorsAndWin();
+        });
+    });
+    document.getElementById('undo-btn').addEventListener('click', handleUndo);
+    document.getElementById('hint-btn').addEventListener('click', handleHint);
+    document.getElementById('success-new-game-btn').addEventListener('click', async () => {
+        document.getElementById('success-modal-overlay').style.display = 'none';
+        await initGame();
+    });
+    document.getElementById('success-close-btn').addEventListener('click', () => { document.getElementById('success-modal-overlay').style.display = 'none'; });
+    document.getElementById('records-btn').addEventListener('click', loadAndShowRecords);
+    document.getElementById('records-close-btn').addEventListener('click', () => { document.getElementById('records-modal-overlay').style.display = 'none'; });
+
+    async function initGame() {
+        await generateNewPuzzle();
+        checkForErrorsAndWin();
+        startTimer();
+    }
+
+    initGame();
+</script>
+
 </body>
 </html>
+
